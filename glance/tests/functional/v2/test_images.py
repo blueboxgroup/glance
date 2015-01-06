@@ -220,6 +220,26 @@ class TestImages(functional.FunctionalTest):
         self.assertEqual(200, response.status_code)
         self.assertEqual(5, json.loads(response.text)['size'])
 
+        # update locations should not work on protected schemes
+        path = self._url('/v2/images/%s' % image_id)
+        media_type = 'application/openstack-images-v2.1-json-patch'
+        headers = self._headers({'content-type': media_type})
+        doc = [{'op': 'replace', 'path': '/locations',
+                'value': [{'url': 'file:///foo_image',
+                           'metadata': {}}]
+                }]
+        data = json.dumps(doc)
+        response = requests.patch(path, headers=headers, data=data)
+        self.assertEqual(400, response.status_code, response.text)
+
+        doc = [{'op': 'replace', 'path': '/locations',
+                'value': [{'url': 'swift+config:///foo_image',
+                           'metadata': {}}]
+                }]
+        data = json.dumps(doc)
+        response = requests.patch(path, headers=headers, data=data)
+        self.assertEqual(400, response.status_code, response.text)
+
         # Deletion should not work on protected images
         path = self._url('/v2/images/%s' % image_id)
         response = requests.delete(path, headers=self._headers())
